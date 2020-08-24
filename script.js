@@ -2,10 +2,14 @@
 let scene, camera, renderer;
 let gridSquares = [];
 let obstacles = [];
+let moveableShapes = [];
+let meshList = [];
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
+let plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let pointOfIntersection = new THREE.Vector3();
+let currentTarget = 0;
 
 // constants
 const GRIDROWS = 50;
@@ -13,6 +17,7 @@ const GRIDCOLS = 50;
 const SQUARESIZE = 0.9;
 
 //booleans
+let isMoving = false;
 let obstacleWasMoved = false;
 
 
@@ -47,6 +52,7 @@ function init() {
 
 	//mouse controls
 	window.addEventListener('mousemove', onMouseMove, false);
+	window.addEventListener('mousedown', onMouseDown, false);
 
 };
 
@@ -58,23 +64,46 @@ function onWindowResize() {
 
 function onMouseMove(event) {
 
-	//test for mouse interaction
-
+	//ray intersection with plane to update pointOfIntersection
 	mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
 	mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 	raycaster.setFromCamera(mouse, camera);
-	let intersects = raycaster.intersectObjects(obstacles, true);
-	console.log(intersects);
-	if (intersects.length > 0) {
-		intersects[0].object.material.color.set('green');
-	}
+	raycaster.ray.intersectPlane(plane, pointOfIntersection);
 
 }
+
+function onMouseDown(event) {
+
+	// if (!isMoving) {
+	// 	let intersects = raycaster.intersectObjects(obstacles, true);
+	// 	if (intersects.length > 0) {
+	// 		isMoving = true;
+	// 		currentTarget = intersects[0].object.uuid;
+	// 	}
+	// } else {
+	// 	isMoving = false;
+	// 	currentTarget = 0;
+	// }
+
+	if (!isMoving) {
+		let intersects = raycaster.intersectObjects(meshList, true);
+		if (intersects.length > 0) {
+			isMoving = true;
+			currentTarget = intersects[0].object.uuid;
+		}
+	} else {
+		isMoving = false;
+		currentTarget = 0;
+	}
+}
+
+
 
 function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
-	gridUpdate();
+	updateObstacles(currentTarget);
+	updateGrid();
 	renderer.render(scene, camera);
 };
 
@@ -105,8 +134,6 @@ function buildGrid() {
 		gridSquares.push(square);
 	}
 
-	gridSquares[26].material.color.set('pink');
-
 }
 
 function buildObstacles() {
@@ -118,15 +145,64 @@ function buildObstacles() {
 	mesh.position.y = 2.5;
 	scene.add(mesh);
 	obstacles.push(mesh);
+
+
+	//with classes
+	let shapeGeometry = new THREE.CylinderBufferGeometry(2, 2, 5, 10);
+	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
+
+	for (let shape of moveableShapes) {
+
+		shape.mesh.position.set(rand(-GRIDCOLS / 2, GRIDCOLS / 2), shape.height / 2, rand(-GRIDROWS / 2, GRIDROWS / 2));
+		console.log(shape.mesh.position);
+		scene.add(shape.mesh);
+		meshList.push(shape.mesh); //put all the meshes in an array for easier intersection tests.
+	}
+
 }
 
+function updateObstacles(target) {
 
-function gridUpdate() {
+	if (target !== 0) {
+		let obstacle;
+		for (let shape of moveableShapes) {
+
+			if (shape.mesh.uuid === target) {
+				obstacle = shape;
+			}
+		}
+		obstacle.mesh.material.color.set('pink');
+		obstacle.mesh.position.set(pointOfIntersection.x, 2.5, pointOfIntersection.z);
+	}
+	else {
+		for (let shape of moveableShapes) {
+			shape.mesh.material.color.set('royalblue');
+		}
+	}
+
+
+
+}
+
+function updateGrid() {
 	if (obstacleWasMoved) {
 		// update obstacle positions on the grid
+
 		obstacleWasMoved = false;
 	}
 }
+
+//utils
+function rand(min, max) {
+	if (max === undefined) {
+		max = min;
+		min = 0;
+	}
+	return min + (max - min) * Math.random();
+}
+
 
 //run program
 init();
