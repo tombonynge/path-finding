@@ -44,7 +44,7 @@ function init() {
 	light.position.set(0, 100, 0);
 	scene.add(light);
 
-	let ambientLight = new THREE.AmbientLight(16724294);
+	let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 	scene.add(ambientLight);
 
 	controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -74,17 +74,6 @@ function onMouseMove(event) {
 
 function onMouseDown(event) {
 
-	// if (!isMoving) {
-	// 	let intersects = raycaster.intersectObjects(obstacles, true);
-	// 	if (intersects.length > 0) {
-	// 		isMoving = true;
-	// 		currentTarget = intersects[0].object.uuid;
-	// 	}
-	// } else {
-	// 	isMoving = false;
-	// 	currentTarget = 0;
-	// }
-
 	if (!isMoving) {
 		let intersects = raycaster.intersectObjects(meshList, true);
 		if (intersects.length > 0) {
@@ -103,7 +92,7 @@ function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
 	updateObstacles(currentTarget);
-	updateGrid();
+	// updateGrid();
 	renderer.render(scene, camera);
 };
 
@@ -112,7 +101,7 @@ function buildGrid() {
 
 	let geometry = new THREE.PlaneBufferGeometry(SQUARESIZE, SQUARESIZE);
 	let positions = [];
-	let color = 'grey';
+	let color = 'lightgrey';
 
 	for (let x = -GRIDCOLS / 2; x < GRIDCOLS / 2; x++) {
 		for (let z = -GRIDROWS / 2; z < GRIDROWS / 2; z++) {
@@ -121,10 +110,9 @@ function buildGrid() {
 	}
 
 	for (let i = 0; i < GRIDROWS * GRIDCOLS; i++) {
-		let material = new THREE.MeshBasicMaterial({ color: 'royalblue' });
+		let material = new THREE.MeshBasicMaterial({ color: color });
 		let square = new THREE.Mesh(geometry, material);
 		square.rotateX(-90 * Math.PI / 180);
-		square.material.color.set(color);
 		square.position.set(
 			positions[i].x,
 			positions[i].y,
@@ -139,24 +127,15 @@ function buildGrid() {
 function buildObstacles() {
 
 	// some random obstacles placed on the grid
-	let cylinder = new THREE.CylinderBufferGeometry(2, 2, 5, 10);
-	let material = new THREE.MeshStandardMaterial({ color: 'royalblue' });
-	let mesh = new THREE.Mesh(cylinder, material);
-	mesh.position.y = 2.5;
-	scene.add(mesh);
-	obstacles.push(mesh);
-
-
-	//with classes
-	let shapeGeometry = new THREE.CylinderBufferGeometry(2, 2, 5, 10);
+	let shapeGeometry = new THREE.CylinderBufferGeometry(1, 2, 5, 10);
 	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'green'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'yellow'));
 
 	for (let shape of moveableShapes) {
 
 		shape.mesh.position.set(rand(-GRIDCOLS / 2, GRIDCOLS / 2), shape.height / 2, rand(-GRIDROWS / 2, GRIDROWS / 2));
-		console.log(shape.mesh.position);
+
 		scene.add(shape.mesh);
 		meshList.push(shape.mesh); //put all the meshes in an array for easier intersection tests.
 	}
@@ -174,11 +153,13 @@ function updateObstacles(target) {
 			}
 		}
 		obstacle.mesh.material.color.set('pink');
-		obstacle.mesh.position.set(pointOfIntersection.x, 2.5, pointOfIntersection.z);
+		obstacle.mesh.position.set(pointOfIntersection.x, 3, pointOfIntersection.z);
+		updateGrid(obstacle);
 	}
 	else {
 		for (let shape of moveableShapes) {
-			shape.mesh.material.color.set('royalblue');
+			shape.mesh.material.color.set(shape.color);
+			shape.mesh.position.y = 2.5;
 		}
 	}
 
@@ -186,12 +167,24 @@ function updateObstacles(target) {
 
 }
 
-function updateGrid() {
-	if (obstacleWasMoved) {
-		// update obstacle positions on the grid
+function updateGrid(shape) {
 
-		obstacleWasMoved = false;
+	let pos = shape.mesh.position;
+	let min = new THREE.Vector2(pos.x - shape.width * 0.75, pos.z - shape.depth * 0.75);
+	let max = new THREE.Vector2(pos.x + shape.width * 0.75, pos.z + shape.depth * 0.75);
+
+	for (let square of gridSquares) {
+
+		if (circleSquareIntersection(pos, square.position, SQUARESIZE, 2)) {
+			square.material.color.set('black');
+		} else {
+			square.material.color.set('lightgrey');
+		}
+
 	}
+
+
+
 }
 
 //utils
@@ -201,6 +194,24 @@ function rand(min, max) {
 		min = 0;
 	}
 	return min + (max - min) * Math.random();
+}
+
+function circleSquareIntersection(circle, square, squareWidth, cirleRadius) {
+	let circleDistance = new THREE.Vector2();
+
+	circleDistance.x = Math.abs(circle.x - square.x);
+	circleDistance.y = Math.abs(circle.z - square.z);
+
+	if (circleDistance.x > (squareWidth / 2 + cirleRadius)) { return false; }
+	if (circleDistance.y > (squareWidth / 2 + cirleRadius)) { return false; }
+
+	if (circleDistance.x <= (squareWidth / 2)) { return true; }
+	if (circleDistance.y <= (squareWidth / 2)) { return true; }
+
+	let cornerDistance_sq = Math.pow(circleDistance.x - squareWidth / 2, 2) +
+		Math.pow(circleDistance.y - squareWidth / 2, 2);
+
+	return (cornerDistance_sq <= Math.pow(cirleRadius, 2));
 }
 
 
