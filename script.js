@@ -4,6 +4,7 @@ let gridSquares = [];
 let obstacles = [];
 let moveableShapes = [];
 let meshList = [];
+let explorer;
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -12,8 +13,8 @@ let pointOfIntersection = new THREE.Vector3();
 let currentTarget = 0;
 
 // constants
-const GRIDROWS = 50;
-const GRIDCOLS = 50;
+const GRIDROWS = 20;
+const GRIDCOLS = 20;
 const SQUARESIZE = 0.9;
 
 //booleans
@@ -22,10 +23,10 @@ let obstacleWasMoved = false;
 
 
 
-function init() {
+function initScene() {
 
 	scene = new THREE.Scene();
-	scene.background = new THREE.Color('white');
+	scene.background = new THREE.Color('black');
 	//add fog
 	//scene.fog = new THREE.Fog( 'white',1,50);
 
@@ -40,9 +41,13 @@ function init() {
 	document.body.appendChild(renderer.domElement);
 
 	//lights
-	let light = new THREE.DirectionalLight(0xffffff);
-	light.position.set(0, 100, 0);
+	let light = new THREE.DirectionalLight(0xffffff, 0.2);
+	light.position.set(0, 10, 0);
 	scene.add(light);
+
+	let light2 = new THREE.DirectionalLight(0xffffff, 0.5);
+	light2.position.set(10, 10, 0);
+	scene.add(light2);
 
 	let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 	scene.add(ambientLight);
@@ -86,12 +91,10 @@ function onMouseDown(event) {
 	}
 }
 
-
-
 function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
-	updateObstacles(currentTarget);
+	updateObstacle(currentTarget);
 	// updateGrid();
 	renderer.render(scene, camera);
 };
@@ -124,13 +127,32 @@ function buildGrid() {
 
 }
 
+function buildExplorer() {
+	explorer = new Explorer('royalblue');
+	explorer.mesh.position.set(-GRIDCOLS / 2, 0.5, GRIDROWS / 2 - 1);
+	scene.add(explorer.mesh);
+	moveableShapes.push(explorer);
+	meshList.push(explorer.mesh);
+}
+
+function buildDestination() {
+	destination = new Destination('tomato');
+	destination.build();
+	scene.add(destination.mesh);
+	destination.mesh.position.y = destination.height / 2;
+	moveableShapes.push(destination);
+	meshList.push(destination.mesh);
+}
+
 function buildObstacles() {
 
 	// some random obstacles placed on the grid
-	let shapeGeometry = new THREE.CylinderBufferGeometry(1, 2, 5, 10);
-	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'royalblue'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'green'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 5, 4, 4, 'yellow'));
+	let shapeGeometry = new THREE.CylinderBufferGeometry(1, 2, 3, 10);
+	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
+	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
 
 	for (let shape of moveableShapes) {
 
@@ -142,50 +164,83 @@ function buildObstacles() {
 
 }
 
-function updateObstacles(target) {
+
+function updateObstacle(target) {
 
 	if (target !== 0) {
-		let obstacle;
+		let selectedShape;
 		for (let shape of moveableShapes) {
 
 			if (shape.mesh.uuid === target) {
-				obstacle = shape;
+				selectedShape = shape;
 			}
 		}
-		obstacle.mesh.material.color.set('pink');
-		obstacle.mesh.position.set(pointOfIntersection.x, 3, pointOfIntersection.z);
-		updateGrid(obstacle);
+
+		if (!selectedShape.selected) {
+			selectedShape.select();
+			let currentColor = selectedShape.mesh.material.color;
+			selectedShape.mesh.material.color.set(currentColor.addScalar(0.3));
+		}
+
+		if (selectedShape.id !== 'obstacle') {
+			//set pointOfIntersection to closest square position
+			pointOfIntersection.x = Math.floor(pointOfIntersection.x);
+			pointOfIntersection.z = Math.floor(pointOfIntersection.z);
+		}
+
+		selectedShape.mesh.position.set(pointOfIntersection.x, selectedShape.height / 2 + 0.5, pointOfIntersection.z);
+		updateGrid();
 	}
 	else {
 		for (let shape of moveableShapes) {
-			shape.mesh.material.color.set(shape.color);
-			shape.mesh.position.y = 2.5;
+			if (shape.selected) {
+				shape.deselect();
+				shape.mesh.position.y = shape.height / 2;
+			}
 		}
 	}
 
-
-
 }
 
-function updateGrid(shape) {
 
-	let pos = shape.mesh.position;
-	let min = new THREE.Vector2(pos.x - shape.width * 0.75, pos.z - shape.depth * 0.75);
-	let max = new THREE.Vector2(pos.x + shape.width * 0.75, pos.z + shape.depth * 0.75);
+function updateGrid() {
 
+	//clear grid = set all squares to light grey
 	for (let square of gridSquares) {
-
-		if (circleSquareIntersection(pos, square.position, SQUARESIZE, 2)) {
-			square.material.color.set('black');
-		} else {
-			square.material.color.set('lightgrey');
-		}
-
+		square.material.color.set('lightgrey');
 	}
 
+	for (let shape of moveableShapes) {
+		updateGridForItem(shape);
+	}
+}
 
+
+function updateGridForItem(item) {
+
+	let pos = item.mesh.position;
+	if (item.id === 'obstacle') {
+		for (let square of gridSquares) {
+			if (circleSquareIntersection(pos, square.position, SQUARESIZE, 2)) {
+				square.material.color.set('grey');
+			}
+		}
+	} else {
+		for (let square of gridSquares) {
+
+			if (square.position.x == pos.x && square.position.z == pos.z) {
+				if (item.id === 'explorer') {
+					square.material.color.set('lightblue');
+				} else {
+					square.material.color.set('lightcoral');
+				}
+
+			}
+		}
+	}
 
 }
+
 
 //utils
 function rand(min, max) {
@@ -216,8 +271,11 @@ function circleSquareIntersection(circle, square, squareWidth, cirleRadius) {
 
 
 //run program
-init();
+initScene();
 buildGrid();
 buildObstacles();
+buildExplorer();
+buildDestination();
+updateGrid();
 animate();
 
