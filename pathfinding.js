@@ -7,6 +7,7 @@ const nodes = [];
 const pathNodeIndices = [];
 let startIndex = null;
 let targetIndex = null;
+const nodeColoringPackages = []; //keep track of path progression
 
 class Node {
     constructor(x, y, index) {
@@ -165,23 +166,18 @@ function getNeighbourNodeIndices(nodeIndex) {
 
 
 function getNodeWithLowestTotalCost(nodeList) {
-
     let chosenNode = nodeList[0];
     let lowestTotalCost = chosenNode.totalCost;
     for (const node of nodeList) {
-        console.log('node:', node);
-        console.log(node.index, 'total cost:', node.totalCost);
         if (node.totalCost <= lowestTotalCost) {
             chosenNode = node;
             lowestTotalCost = node.totalCost;
         }
     }
-    console.log('the chosen node:', chosenNode);
     return chosenNode;
 }
 
 function updateGridFromNodes() {
-
     for (const node of nodes) {
         if (node.open) {
             gridSquares[node.index].material.color.set('lightgrey');
@@ -195,15 +191,12 @@ function updateGridFromNodes() {
 
 function highlightPath(targetIndex) {
     let currentPathNode = nodes[targetIndex];
-    console.log('currentPathNode:', currentPathNode);
     const pathList = [];
     while (currentPathNode.parent) {
         pathList.push(currentPathNode.index);
         currentPathNode = currentPathNode.parent;
     }
     pathList.push(currentPathNode.index);
-
-    console.log(pathList);
     pathList.forEach(function (i) {
         gridSquares[i].material.color.set('lightcoral');
     });
@@ -211,9 +204,11 @@ function highlightPath(targetIndex) {
 
 function getPath(startIndex, targetIndex) {
 
-    console.log('calculating path');
-    console.log(startIndex);
-    console.log(targetIndex);
+    // console.log('calculating path');
+    // console.log(startIndex);
+    // console.log(targetIndex);
+
+    nodeColoringPackages.length = 0; //clear the packages
 
     // stop if path is invalid!
     if (!startIndex || !targetIndex || nodes[startIndex].blocked || nodes[targetIndex].blocked) {
@@ -229,62 +224,74 @@ function getPath(startIndex, targetIndex) {
 
     let currentNode = pathNodesOpen[0];
 
+    let iteration = 0;
     while (pathNodesOpen.length > 0) {
 
-        console.log('****************');
-
-        updateGridFromNodes();
+        let nodesForColoring = []; //use this array to store nodes to be coloured through each iteration.
 
         if (pathNodesOpen.length > 1) {
-            console.log('the current node: ', currentNode);
             currentNode = getNodeWithLowestTotalCost(pathNodesOpen);
-
         }
         pathNodesOpen.splice(pathNodesOpen.indexOf(currentNode), 1);
         pathNodesClosed.push(currentNode);
         currentNode.open = false;
         currentNode.closed = true;
-        // console.log('pathNodesClosed: ', pathNodesClosed);
-
+        nodesForColoring.push({ index: currentNode.index, state: 'closed' });
         if (currentNode.index === targetIndex) {
-            // TODO: draw the path!
             console.log('FOUND A PATH!');
-            // console.log('the path is: ', path);
-            highlightPath(targetIndex);
+            // draw the path!
+            // highlightPath(targetIndex);
+            highlightWithInterval();
             return;
         }
 
-        const neighbourNodeIndices = getNeighbourNodeIndices(currentNode.index);
-        // console.log(neighbourNodeIndices);
-        neighbourNodeIndices.forEach(n => {
 
+        const neighbourNodeIndices = getNeighbourNodeIndices(currentNode.index);
+        neighbourNodeIndices.forEach(n => {
             if (nodes[n].blocked || pathNodesClosed.indexOf(nodes[n]) != -1) {
-                // console.log('node blocked or in closed list');
                 return;
             }
-
             // get the nodes targetCost
             nodes[n].targetCost = calculateTargetCost(nodes[n], nodes[targetIndex]);
-
-            console.log('neighbour node', nodes[n]);
             // if new path of the neighbour is shorter, or neighbour is not in the open list
             let newStartCost = currentNode.startCost + calculateStartCost(currentNode, nodes[n])
             if (newStartCost < nodes[n].startCost || pathNodesOpen.indexOf(nodes[n]) == -1) {
                 nodes[n].startCost = newStartCost;
                 nodes[n].calculateTotalCost();
                 nodes[n].parent = currentNode;
-                // console.log(nodes[n]);
 
                 if (pathNodesOpen.indexOf(nodes[n]) == -1) {
-                    // console.log('adding ', n, ' to the open list');
                     pathNodesOpen.push(nodes[n]);
                     nodes[n].open = true;
+                    nodesForColoring.push({ index: n, state: 'open' });
                 }
             }
         })
+
+        nodeColoringPackages.push({ nodes: nodesForColoring, iteration: iteration });
+        iteration++;
     }
 }
 
+function highlightWithInterval() {
+
+    for (let i = 0; i < nodeColoringPackages.length; i++) {
+        let currentPackage = nodeColoringPackages[i];
+        setTimeout(function () {
+            console.log(currentPackage);
+            for (const n of currentPackage.nodes) {
+                console.log(n);
+                if (n.state === 'closed') {
+                    gridSquares[n.index].material.color.set('yellow');
+                } else {
+                    gridSquares[n.index].material.color.set('lightgrey');
+                }
+            }
+        }, 50 * i);
+    }
+    // highlightPath(targetIndex);
+
+}
 
 /*
 // Binary Heap
