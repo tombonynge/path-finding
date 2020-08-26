@@ -13,8 +13,8 @@ let pointOfIntersection = new THREE.Vector3();
 let currentTarget = 0;
 
 // constants
-const GRIDROWS = 20;
-const GRIDCOLS = 20;
+const GRIDROWS = 22;
+const GRIDCOLS = 22;
 const SQUARESIZE = 0.9;
 
 //booleans
@@ -32,7 +32,7 @@ function initScene() {
 
 	//orbit control camera
 	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-	camera.position.set(0, 40, 10);
+	camera.position.set(0, 20, 10);
 	camera.lookAt(new THREE.Vector3(0, 0, 0));
 	scene.add(camera);
 
@@ -58,6 +58,14 @@ function initScene() {
 	//mouse controls
 	window.addEventListener('mousemove', onMouseMove, false);
 	window.addEventListener('mousedown', onMouseDown, false);
+	window.addEventListener('keydown', (e) => {
+
+		if (e.keyCode === 32) {
+			updateGrid();
+			ResetNodesFromGrid(gridSquares);
+			getPath(startIndex, targetIndex);
+		}
+	}, false)
 
 };
 
@@ -95,7 +103,6 @@ function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
 	updateObstacle(currentTarget);
-	// updateGrid();
 	renderer.render(scene, camera);
 };
 
@@ -123,6 +130,13 @@ function buildGrid() {
 		);
 		scene.add(square);
 		gridSquares.push(square);
+	}
+
+	//edge cases ..literally
+	for (i = 0; i < gridSquares.length; i++) {
+		if (i <= GRIDROWS || i % GRIDROWS == 0 || (i + 1) % GRIDROWS == 0 || i > (GRIDROWS * GRIDROWS) - GRIDROWS) {
+			gridSquares[i].edge = true;
+		};
 	}
 
 }
@@ -166,28 +180,23 @@ function buildObstacles() {
 
 
 function updateObstacle(target) {
-
 	if (target !== 0) {
 		let selectedShape;
 		for (let shape of moveableShapes) {
-
 			if (shape.mesh.uuid === target) {
 				selectedShape = shape;
 			}
 		}
-
 		if (!selectedShape.selected) {
 			selectedShape.select();
 			let currentColor = selectedShape.mesh.material.color;
 			selectedShape.mesh.material.color.set(currentColor.addScalar(0.3));
 		}
-
 		if (selectedShape.id !== 'obstacle') {
 			//set pointOfIntersection to closest square position
 			pointOfIntersection.x = Math.floor(pointOfIntersection.x);
 			pointOfIntersection.z = Math.floor(pointOfIntersection.z);
 		}
-
 		selectedShape.mesh.position.set(pointOfIntersection.x, selectedShape.height / 2 + 0.5, pointOfIntersection.z);
 		updateGrid();
 	}
@@ -199,40 +208,50 @@ function updateObstacle(target) {
 			}
 		}
 	}
-
 }
 
 
 function updateGrid() {
-
-	//clear grid = set all squares to light grey
-	for (let square of gridSquares) {
-		square.material.color.set('lightgrey');
+	// clear grid = set all squares to light grey
+	// set their blocked property to false and pathPosition to null
+	for (const square of gridSquares) {
+		square.pathPosition = null;
+		square.blocked = false;
+		if (square.edge == true) {
+			square.material.color.set('grey');
+		} else {
+			square.material.color.set('white');
+		}
 	}
 
-	for (let shape of moveableShapes) {
+	for (const shape of moveableShapes) {
 		updateGridForItem(shape);
 	}
 }
 
 
 function updateGridForItem(item) {
-
 	let pos = item.mesh.position;
 	if (item.id === 'obstacle') {
-		for (let square of gridSquares) {
+		for (const square of gridSquares) {
 			if (circleSquareIntersection(pos, square.position, SQUARESIZE, 2)) {
 				square.material.color.set('grey');
+				square.blocked = true;
 			}
 		}
 	} else {
-		for (let square of gridSquares) {
-
+		for (const square of gridSquares) {
 			if (square.position.x == pos.x && square.position.z == pos.z) {
 				if (item.id === 'explorer') {
-					square.material.color.set('lightblue');
+					if (!square.blocked && !square.edge) {
+						square.material.color.set('lightblue');
+						square.pathPosition = 'start';
+					}
 				} else {
-					square.material.color.set('lightcoral');
+					if (!square.blocked && !square.edge) {
+						square.material.color.set('lightcoral');
+						square.pathPosition = 'target';
+					}
 				}
 
 			}
@@ -277,5 +296,6 @@ buildObstacles();
 buildExplorer();
 buildDestination();
 updateGrid();
+getNodesFromGrid(gridSquares);
 animate();
 
