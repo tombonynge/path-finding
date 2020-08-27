@@ -12,5 +12,5 @@ Click on any object to pick it up. You can move it around the grid and click aga
 Click the 'find path' button, to begin path finding.
         
 #### Extras:
-More info on the A* algorithm can be found [here](https://en.wikipedia.org/wiki/A*_search_algorithm).
-A great video explaining the algorithm by Sebastian Lague on [youtube][https://youtu.be/-L-WgKMFuhE]
+More info on the A* algorithm can be found [here](https://en.wikipedia.org/wiki/A*_search_algorithm).<br/>
+A great video explaining the algorithm by Sebastian Lague on [youtube](https://youtu.be/-L-WgKMFuhE)
