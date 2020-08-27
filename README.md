@@ -11,5 +11,6 @@ Click on any object to pick it up. You can move it around the grid and click aga
 * The yellow cones are obstacles that the Explorer must avoid.
 Click the 'find path' button, to begin path finding.
         
-#### More info:
+#### Extras:
 More info on the A* algorithm can be found [here](https://en.wikipedia.org/wiki/A*_search_algorithm).
+A great video explaining the algorithm by Sebastian Lague on [youtube][https://youtu.be/-L-WgKMFuhE]
