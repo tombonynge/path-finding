@@ -13,9 +13,9 @@ let pointOfIntersection = new THREE.Vector3();
 let currentTarget = 0;
 
 // constants
-const GRIDROWS = 22;
-const GRIDCOLS = 22;
-const SQUARESIZE = 0.9;
+const GRIDROWS = 26;
+const GRIDCOLS = 26;
+const SQUARESIZE = 0.95;
 
 //booleans
 let isMoving = false;
@@ -26,9 +26,7 @@ let obstacleWasMoved = false;
 function initScene() {
 
 	scene = new THREE.Scene();
-	scene.background = new THREE.Color('black');
-	//add fog
-	//scene.fog = new THREE.Fog( 'white',1,50);
+	scene.background = new THREE.Color('grey');
 
 	//orbit control camera
 	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -49,6 +47,10 @@ function initScene() {
 	light2.position.set(10, 10, 0);
 	scene.add(light2);
 
+	let light3 = new THREE.DirectionalLight(0xffffff, 0.2);
+	light3.position.set(5, 5, -10);
+	scene.add(light3);
+
 	let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 	scene.add(ambientLight);
 
@@ -58,15 +60,14 @@ function initScene() {
 	//mouse controls
 	window.addEventListener('mousemove', onMouseMove, false);
 	window.addEventListener('mousedown', onMouseDown, false);
-	window.addEventListener('keydown', (e) => {
 
-		if (e.keyCode === 32) {
-			updateGrid();
-			ResetNodesFromGrid(gridSquares);
-			getPath(startIndex, targetIndex);
-		}
-	}, false)
+	document.querySelector('button').addEventListener('click', () => {
 
+		updateGrid();
+		ResetNodesFromGrid(gridSquares);
+		getPath(startIndex, targetIndex);
+
+	});
 };
 
 function onWindowResize() {
@@ -82,6 +83,11 @@ function onMouseMove(event) {
 	mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 	raycaster.setFromCamera(mouse, camera);
 	raycaster.ray.intersectPlane(plane, pointOfIntersection);
+
+	//constrain point of intersection
+	let edge = (GRIDCOLS / 2);
+	pointOfIntersection.x = clampBetween(pointOfIntersection.x, -edge + 1, edge - 2);
+	pointOfIntersection.z = clampBetween(pointOfIntersection.z, -edge + 1, edge - 2);
 
 }
 
@@ -120,7 +126,7 @@ function buildGrid() {
 	}
 
 	for (let i = 0; i < GRIDROWS * GRIDCOLS; i++) {
-		let material = new THREE.MeshBasicMaterial({ color: color });
+		let material = new THREE.MeshStandardMaterial({ color: color });
 		let square = new THREE.Mesh(geometry, material);
 		square.rotateX(-90 * Math.PI / 180);
 		square.position.set(
@@ -143,7 +149,7 @@ function buildGrid() {
 
 function buildExplorer() {
 	explorer = new Explorer('royalblue');
-	explorer.mesh.position.set(-GRIDCOLS / 2, 0.5, GRIDROWS / 2 - 1);
+	explorer.mesh.position.set(-GRIDCOLS / 2 + 1, 0.5, GRIDROWS / 2 - 2);
 	scene.add(explorer.mesh);
 	moveableShapes.push(explorer);
 	meshList.push(explorer.mesh);
@@ -161,16 +167,17 @@ function buildDestination() {
 function buildObstacles() {
 
 	// some random obstacles placed on the grid
-	let shapeGeometry = new THREE.CylinderBufferGeometry(1, 2, 3, 10);
-	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
-	moveableShapes.push(new Obstacle(shapeGeometry, 3, 4, 4, 'darkorange'));
+	let shapeGeometry = new THREE.CylinderBufferGeometry(1, 2, 2, 12);
+	let obstacleColor = 'gold'
+	moveableShapes.push(new Obstacle(shapeGeometry, 2, 4, 4, obstacleColor));
+	moveableShapes.push(new Obstacle(shapeGeometry, 2, 4, 4, obstacleColor));
+	moveableShapes.push(new Obstacle(shapeGeometry, 2, 4, 4, obstacleColor));
+	moveableShapes.push(new Obstacle(shapeGeometry, 2, 4, 4, obstacleColor));
+
 
 	for (let shape of moveableShapes) {
 
-		shape.mesh.position.set(rand(-GRIDCOLS / 2, GRIDCOLS / 2), shape.height / 2, rand(-GRIDROWS / 2, GRIDROWS / 2));
+		shape.mesh.position.set(rand(-GRIDCOLS / 2 + 1, GRIDCOLS / 2 - 2), shape.height / 2, rand(-GRIDROWS / 2 + 1, GRIDROWS / 2 - 2));
 
 		scene.add(shape.mesh);
 		meshList.push(shape.mesh); //put all the meshes in an array for easier intersection tests.
@@ -218,7 +225,7 @@ function updateGrid() {
 		square.pathPosition = null;
 		square.blocked = false;
 		if (square.edge == true) {
-			square.material.color.set('grey');
+			square.material.color.set('black');
 		} else {
 			square.material.color.set('white');
 		}
@@ -286,6 +293,10 @@ function circleSquareIntersection(circle, square, squareWidth, cirleRadius) {
 		Math.pow(circleDistance.y - squareWidth / 2, 2);
 
 	return (cornerDistance_sq <= Math.pow(cirleRadius, 2));
+}
+
+function clampBetween(n, min, max) {
+	return Math.min(Math.max(n, min), max);
 }
 
 

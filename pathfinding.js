@@ -51,13 +51,6 @@ function calculateStartCost(parent, node) {
 }
 
 function calculateTargetCost(node, targetNode) {
-    // let xDist = Math.abs(node.x / GRIDCOLS - targetNode.x / GRIDCOLS);
-    // let yDist = Math.abs(node.y / GRIDROWS - targetNode.y / GRIDROWS);
-    // if (xDist > yDist) {
-    //     return (14 * yDist + (10 * (xDist - yDist)));
-    // } else {
-    //     return (14 * xDist + (10 * (yDist - xDist)));
-    // };
     let p = new THREE.Vector2(node.x, node.y);
     let q = new THREE.Vector2(targetNode.x, targetNode.y);
     return Math.abs(p.sub(q).length());
@@ -84,9 +77,6 @@ function getNodesFromGrid(grid) {
         if (square.blocked || square.edge) {
             node.blocked = true;
         }
-
-
-
     }
 
     console.log(nodes);
@@ -158,7 +148,6 @@ function getNeighbourNodeIndices(nodeIndex) {
     for (const n of neighbourIndices) {
         if (!nodes[n].blocked) {
             validNeighbourIndices.push(n);
-            // nodes[n].parent = nodes[nodeIndex];
         }
     }
     return validNeighbourIndices;
@@ -188,19 +177,6 @@ function updateGridFromNodes() {
     }
 }
 
-
-function highlightPath(targetIndex) {
-    let currentPathNode = nodes[targetIndex];
-    const pathList = [];
-    while (currentPathNode.parent) {
-        pathList.push(currentPathNode.index);
-        currentPathNode = currentPathNode.parent;
-    }
-    pathList.push(currentPathNode.index);
-    pathList.forEach(function (i) {
-        gridSquares[i].material.color.set('lightcoral');
-    });
-}
 
 function getPath(startIndex, targetIndex) {
 
@@ -240,7 +216,7 @@ function getPath(startIndex, targetIndex) {
         if (currentNode.index === targetIndex) {
             console.log('FOUND A PATH!');
             // draw the path!
-            // highlightPath(targetIndex);
+            nodeColoringPackages.push({ nodes: buildFinalnodeColoringPackage(targetIndex), iteration: iteration });
             highlightWithInterval();
             return;
         }
@@ -273,90 +249,41 @@ function getPath(startIndex, targetIndex) {
     }
 }
 
+function buildFinalnodeColoringPackage(targetIndex) {
+
+    const finalPath = [];
+    let currentPathNode = nodes[targetIndex];
+
+    while (currentPathNode.parent) {
+        finalPath.push({ index: currentPathNode.index, state: 'path' });
+        currentPathNode = currentPathNode.parent;
+    }
+    finalPath.push({ index: currentPathNode.index, state: 'path' });
+
+    console.log('finalPath:', finalPath);
+
+    return finalPath;
+
+}
+
 function highlightWithInterval() {
 
     for (let i = 0; i < nodeColoringPackages.length; i++) {
         let currentPackage = nodeColoringPackages[i];
         setTimeout(function () {
-            console.log(currentPackage);
+            // console.log(currentPackage);
             for (const n of currentPackage.nodes) {
-                console.log(n);
+
                 if (n.state === 'closed') {
-                    gridSquares[n.index].material.color.set('yellow');
-                } else {
+                    gridSquares[n.index].material.color.set('lightgreen');
+                }
+                if (n.state === 'open') {
                     gridSquares[n.index].material.color.set('lightgrey');
+                }
+                if (n.state === 'path') {
+                    gridSquares[n.index].material.color.set('lightseagreen');
                 }
             }
         }, 50 * i);
     }
-    // highlightPath(targetIndex);
-
 }
-
-/*
-// Binary Heap
-class BinaryHeap {
-    constructor(heap) {
-        this.heap = heap
-    }
-
-    insert(value) {
-        this.heap.push(value)
-        this.bubbleUp();
-    }
-
-    bubbleUp() {
-        let index = this.heap.length - 1;
-
-        while (index > 0) {
-            let element = this.heap[index],
-                parentIndex = Math.floor((index - 1) / 2),
-                parent = this.heap[parentIndex];
-
-            if (parent.h_cost <= element.h_cost) {
-                break;
-            } else {
-                this.heap[index] = parent;
-                this.heap[parentIndex] = element;
-                index = parentIndex;
-            }
-        }
-    }
-
-    extractMin() {
-        const min = this.heap[0];
-        this.heap[0] = this.heap.pop()
-        this.sinkDown(0)
-        return min
-    }
-
-    sinkDown(index) {
-
-        let left = 2 * index + 1;
-        let right = 2 * index + 2;
-        let smallest = index;
-        const length = this.heap.length;
-
-        if (left <= length && this.heap[left].h_cost < this.heap[smallest].h_cost) {
-            smallest = left;
-        }
-        if (right <= length && this.heap[right].h_cost < this.heap[smallest].h_cost) {
-            smallest = right;
-        }
-        // swap
-        if (smallest !== index) {
-            [this.heap[smallest], this.heap[index]] = [this.heap[index], this.heap[smallest]];
-            this.sinkDown(smallest);
-        }
-    }
-
-    delete() {
-        this.heap = [];
-    }
-
-    peekAtMin() {
-        return this.heap[0];
-    }
-
-}
-*/

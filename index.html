@@ -6,25 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Path finding</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            margin: 0;
-            background-color: gray;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-
-        canvas {
-            width: 100%;
-            height: 100%
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <div class="panel">
+        <h3>A* Path Finding</h3>
+        <p>
+            Click on any object to pick it up. You can move it around the grid and click again to drop it.
+        <ul>
+            <li>The blue sphere is the 'Explorer'.</li>
+            <li>The red cone is the 'Destination'.</li>
+            <li>The yellow cones are obstacles that the Explorer must avoid.</li>
+        </ul>
+
+        Click the button below, to begin path finding.
+
+
+
+
+        </p>
+
+        <button>find path</button>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r119/three.min.js"></script>
     <script src="OrbitControls.js"></script>
     <script src="elements.js"></script>

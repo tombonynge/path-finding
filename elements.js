@@ -26,7 +26,7 @@ class Obstacle extends Draggable {
         this.depth = depth;
         this.mesh = new THREE.Mesh(
             geometry,
-            new THREE.MeshStandardMaterial({ color: this.color })
+            new THREE.MeshStandardMaterial({ color: this.color, flatShading: true })
         );
     }
 }
